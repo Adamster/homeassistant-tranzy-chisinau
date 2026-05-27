@@ -1,0 +1,36 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Tranzy — Connect",
+        "description": "Enter your API key from https://apps.tranzy.ai/accounts",
+        "data": {
+          "api_key": "API Key"
+        }
+      },
+      "stop": {
+        "title": "Select a Stop",
+        "description": "Enter part of the stop name to search. If multiple results are found, select the correct one.",
+        "data": {
+          "stop_search": "Search stop name",
+          "stop_id": "Stop ({count} found for '{search}')"
+        }
+      },
+      "routes": {
+        "title": "Select Routes for {stop_name}",
+        "description": "Choose the routes you want to track at this stop.",
+        "data": {
+          "routes": "Routes"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect. Please check your API key.",
+      "stop_not_found": "No stops found. Try a different search term.",
+      "no_routes_selected": "Please select at least one route."
+    },
+    "abort": {
+      "already_configured": "This stop is already configured."
+    }
+  }
+}

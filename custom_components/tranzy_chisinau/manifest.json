@@ -1,0 +1,11 @@
+{
+  "domain": "tranzy_chisinau",
+  "name": "Tranzy Chișinău Transport",
+  "version": "2.0.0",
+  "documentation": "https://tranzy.ai/opendata/",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": [],
+  "iot_class": "cloud_polling",
+  "config_flow": true
+}
