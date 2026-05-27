@@ -13,10 +13,10 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     LocationSelector,
     LocationSelectorConfig,
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
-    SelectOptionDict,
 )
 import homeassistant.helpers.config_validation as cv
 
@@ -144,12 +144,14 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 else:
                     return await self.async_step_stop_select()
 
+        # Default to Chișinău city center so the map opens in the right place
         return self.async_show_form(
             step_id="location",
             data_schema=vol.Schema({
-                vol.Required("location"): LocationSelector(
-                    LocationSelectorConfig(radius=False, icon="mdi:map-marker")
-                ),
+                vol.Required(
+                    "location",
+                    default={"latitude": 47.0105, "longitude": 28.8638},
+                ): LocationSelector(LocationSelectorConfig(radius=False)),
             }),
             errors=errors,
         )
