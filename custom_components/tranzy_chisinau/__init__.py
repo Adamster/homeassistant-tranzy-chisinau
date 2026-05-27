@@ -9,6 +9,7 @@ from homeassistant.components.persistent_notification import async_create as not
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.event import async_call_later
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         def _schedule(_now=None):
             hass.async_create_task(_notify_card(hass, entry))
 
-        hass.async_call_later(3, _schedule)
+        async_call_later(hass, 3, _schedule)
         hass.config_entries.async_update_entry(
             entry, options={**entry.options, "card_notified": True}
         )
