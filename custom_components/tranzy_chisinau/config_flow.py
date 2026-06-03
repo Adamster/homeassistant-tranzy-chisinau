@@ -171,14 +171,13 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
             return await self.async_step_routes()
 
-        options = [
-            SelectOptionDict(
+        options = []
+        for dist, s, _lat, _lon in self._nearby_stops:
+            name = s.get("stop_name") or f"Stop {s['stop_id']}"
+            options.append(SelectOptionDict(
                 value=str(s["stop_id"]),
-                label=f"{s.get('stop_name', f'Stop {s[\"stop_id\"]}')}"
-                      f"  —  {dist * 1000:.0f} м",
-            )
-            for dist, s, _lat, _lon in self._nearby_stops
-        ]
+                label=f"{name}  —  {dist * 1000:.0f} м",
+            ))
 
         stop_links = "\n".join(
             f"- [{s.get('stop_name', 'Stop')} ({dist * 1000:.0f} м)]"
