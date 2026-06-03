@@ -32,22 +32,24 @@ def haversine_km(lat1, lon1, lat2, lon2) -> float:
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Register the Lovelace card JS as a frontend module."""
-    try:
-        from homeassistant.components.frontend import add_extra_js_url
-        from homeassistant.components.http import StaticPathConfig
+    """Copy card JS to config/www/ and register as Lovelace resource."""
+    import shutil
+    from homeassistant.components.frontend import add_extra_js_url
 
-        www = Path(__file__).parent / "www"
-        if www.is_dir():
-            await hass.http.async_register_static_paths([
-                StaticPathConfig(f"/{DOMAIN}", str(www), cache_headers=False)
-            ])
-            add_extra_js_url(hass, f"/{DOMAIN}/tranzy-chisinau-card.js")
-            _LOGGER.info("Tranzy card JS registered successfully")
-        else:
-            _LOGGER.warning("Tranzy www directory not found at %s", www)
-    except Exception as err:
-        _LOGGER.error("Failed to register Tranzy card JS: %s", err)
+    src = Path(__file__).parent / "www" / "tranzy-chisinau-card.js"
+    dst_dir = Path(hass.config.config_dir) / "www"
+    dst = dst_dir / "tranzy-chisinau-card.js"
+
+    if src.exists():
+        try:
+            dst_dir.mkdir(exist_ok=True)
+            shutil.copy2(src, dst)
+            add_extra_js_url(hass, "/local/tranzy-chisinau-card.js")
+            _LOGGER.info("Tranzy card JS copied to %s", dst)
+        except Exception as err:
+            _LOGGER.error("Failed to copy Tranzy card JS: %s", err)
+    else:
+        _LOGGER.warning("Tranzy card JS source not found at %s", src)
 
     return True
 
