@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 const CARD_TAG     = "tranzy-chisinau-card";
-const CARD_VERSION = "0.1.13";
+const CARD_VERSION = "0.1.14";
 const DSEG7_URL    = "https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2";
 
 // Identify Tranzy route sensors by attribute.
@@ -479,11 +479,28 @@ class TranzyChisinauCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    // Don't re-render while user is actively typing (focused input)
-    const active = this._root.activeElement;
-    if (!active || active.tagName === "SELECT" || active.type === "checkbox" || active.type === "radio") {
-      this._render();
-    }
+    this._renderKeepInputs();
+  }
+
+  // Re-render but preserve any text the user is currently typing
+  _renderKeepInputs() {
+    // Save all text input values and cursor positions before innerHTML replacement
+    const saved = {};
+    this._root.querySelectorAll("input[type=text], input[type=number]").forEach(el => {
+      const key = el.dataset.action + "_" + (el.dataset.idx ?? el.id ?? "");
+      saved[key] = { value: el.value, start: el.selectionStart, end: el.selectionEnd };
+    });
+
+    this._render();
+
+    // Restore saved values into the freshly rendered inputs
+    this._root.querySelectorAll("input[type=text], input[type=number]").forEach(el => {
+      const key = el.dataset.action + "_" + (el.dataset.idx ?? el.id ?? "");
+      if (saved[key] !== undefined) {
+        el.value = saved[key].value;
+        try { el.setSelectionRange(saved[key].start, saved[key].end); } catch (_) {}
+      }
+    });
   }
 
   _discover() {
