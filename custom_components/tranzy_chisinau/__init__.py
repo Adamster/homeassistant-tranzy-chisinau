@@ -34,10 +34,13 @@ def haversine_km(lat1, lon1, lat2, lon2) -> float:
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Register the Lovelace card JS as a frontend module."""
     from homeassistant.components.frontend import add_extra_js_url
+    from homeassistant.components.http import StaticPathConfig
 
     www = Path(__file__).parent / "www"
     if www.is_dir():
-        hass.http.register_static_path(f"/{DOMAIN}", str(www), cache_headers=False)
+        await hass.http.async_register_static_paths([
+            StaticPathConfig(f"/{DOMAIN}", str(www), cache_headers=False)
+        ])
         add_extra_js_url(hass, f"/{DOMAIN}/tranzy-chisinau-card.js")
 
     return True
