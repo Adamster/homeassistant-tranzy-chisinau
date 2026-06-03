@@ -21,7 +21,6 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
-    TextSelectorType,
 )
 import homeassistant.helpers.config_validation as cv
 
@@ -89,7 +88,7 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: config_entries.ConfigEntry):
-        return TranzyOptionsFlow(config_entry)
+        return TranzyOptionsFlow()
 
     # ── Step 1 — API key ─────────────────────────────────────────
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
@@ -264,9 +263,6 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class TranzyOptionsFlow(config_entries.OptionsFlow):
     """Shown when user clicks Configure on the integration card."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self._entry = config_entry
-
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
         if user_input is not None:
             return self.async_create_entry(title="", data={})
@@ -275,12 +271,12 @@ class TranzyOptionsFlow(config_entries.OptionsFlow):
         route_entities = sorted(
             e.entity_id
             for e in reg.entities.values()
-            if e.config_entry_id == self._entry.entry_id
+            if e.config_entry_id == self.config_entry.entry_id
             and e.unique_id
             and "_route_" in e.unique_id
         )
 
-        stop_name = self._entry.data.get("stop_name", "My Stop")
+        stop_name = self.config_entry.data.get("stop_name", "My Stop")
         entity_lines = "\n".join(f"      - {eid}" for eid in route_entities)
 
         card_yaml = (
@@ -295,7 +291,7 @@ class TranzyOptionsFlow(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema({
                 vol.Optional("card_yaml", default=card_yaml): TextSelector(
-                    TextSelectorConfig(multiline=True, type=TextSelectorType.TEXT)
+                    TextSelectorConfig(multiline=True)
                 ),
             }),
             description_placeholders={"stop_name": stop_name},
