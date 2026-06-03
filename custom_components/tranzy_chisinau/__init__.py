@@ -67,8 +67,11 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         ])
         add_extra_js_url(hass, f"/{DOMAIN}/tranzy-chisinau-card.js")
 
-    websocket_api.async_register_command(hass, ws_find_stops)
-    websocket_api.async_register_command(hass, ws_add_stop)
+    try:
+        websocket_api.async_register_command(hass, ws_find_stops)
+        websocket_api.async_register_command(hass, ws_add_stop)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning("Could not register Tranzy WebSocket commands: %s", err)
 
     return True
 
@@ -85,7 +88,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 # ── WebSocket: find nearby stops ──────────────────────────────────
 
-@websocket_api.require_admin
 @websocket_api.websocket_command({
     vol.Required("type"): "tranzy_chisinau/find_stops",
     vol.Required("lat"): float,
@@ -94,6 +96,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 @websocket_api.async_response
 async def ws_find_stops(hass: HomeAssistant, connection, msg: dict) -> None:
     """Return 5 nearest stops + all routes for the given coordinates."""
+    if not connection.user.is_admin:
+        connection.send_error(msg["id"], "unauthorized", "Admin required")
+        return
     entries = hass.config_entries.async_entries(DOMAIN)
     if not entries:
         connection.send_error(msg["id"], "no_config", "No Tranzy integration configured")
@@ -143,7 +148,6 @@ async def ws_find_stops(hass: HomeAssistant, connection, msg: dict) -> None:
 
 # ── WebSocket: create new config entry for a stop ─────────────────
 
-@websocket_api.require_admin
 @websocket_api.websocket_command({
     vol.Required("type"): "tranzy_chisinau/add_stop",
     vol.Required("stop_id"): int,
@@ -155,6 +159,9 @@ async def ws_find_stops(hass: HomeAssistant, connection, msg: dict) -> None:
 @websocket_api.async_response
 async def ws_add_stop(hass: HomeAssistant, connection, msg: dict) -> None:
     """Programmatically create a new Tranzy config entry."""
+    if not connection.user.is_admin:
+        connection.send_error(msg["id"], "unauthorized", "Admin required")
+        return
     entries = hass.config_entries.async_entries(DOMAIN)
     if not entries:
         connection.send_error(msg["id"], "no_config", "No Tranzy integration configured")
