@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 const CARD_TAG     = "tranzy-chisinau-card";
-const CARD_VERSION = "0.1.15";
+const CARD_VERSION = "0.1.16";
 const DSEG7_URL    = "https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2";
 
 // Identify Tranzy route sensors by attribute.
@@ -494,10 +494,13 @@ class TranzyChisinauCardEditor extends HTMLElement {
 
   // Re-render but preserve any text the user is currently typing
   _renderKeepInputs() {
+    // Skip re-render while map is open — it would destroy ha-location-editor
+    if (this._wiz === "location") return;
+
     // Save all text input values and cursor positions before innerHTML replacement
     const saved = {};
     this._root.querySelectorAll("input[type=text], input[type=number]").forEach(el => {
-      const key = el.dataset.action + "_" + (el.dataset.idx ?? el.id ?? "");
+      const key = (el.dataset.action ?? "") + "_" + (el.dataset.idx ?? el.id ?? "");
       saved[key] = { value: el.value, start: el.selectionStart, end: el.selectionEnd };
     });
 
@@ -505,7 +508,7 @@ class TranzyChisinauCardEditor extends HTMLElement {
 
     // Restore saved values into the freshly rendered inputs
     this._root.querySelectorAll("input[type=text], input[type=number]").forEach(el => {
-      const key = el.dataset.action + "_" + (el.dataset.idx ?? el.id ?? "");
+      const key = (el.dataset.action ?? "") + "_" + (el.dataset.idx ?? el.id ?? "");
       if (saved[key] !== undefined) {
         el.value = saved[key].value;
         try { el.setSelectionRange(saved[key].start, saved[key].end); } catch (_) {}
@@ -656,20 +659,14 @@ class TranzyChisinauCardEditor extends HTMLElement {
     if (this._wiz === "location") {
       return `
         <div class="wizard">
-          <div class="wiz-title">➕ Новая остановка — шаг 1: место</div>
-          <div class="wiz-row">
-            <button class="btn-geo" id="wiz-geo">📍 Моё местоположение</button>
-          </div>
-          <div class="wiz-divider">или введите координаты вручную:</div>
-          <div class="wiz-row">
-            <input class="wiz-input" id="wiz-lat" type="number" step="0.0001"
-                   placeholder="Широта (47.01)" value="${d.lat ?? ""}">
-            <input class="wiz-input" id="wiz-lon" type="number" step="0.0001"
-                   placeholder="Долгота (28.86)" value="${d.lon ?? ""}">
-            <button class="btn-search" id="wiz-search">Найти →</button>
-          </div>
+          <div class="wiz-title">➕ Новая остановка — шаг 1: выбери место на карте</div>
+          <button class="btn-geo" id="wiz-geo">📍 Моё местоположение</button>
+          <ha-location-editor id="wiz-map"
+            style="display:block;height:260px;border-radius:8px;overflow:hidden;margin:10px 0;">
+          </ha-location-editor>
           <div class="wiz-actions">
             <button class="btn-cancel" id="wiz-cancel">Отмена</button>
+            <button class="btn-next" id="wiz-search">Найти остановки →</button>
           </div>
         </div>`;
     }
@@ -784,25 +781,50 @@ class TranzyChisinauCardEditor extends HTMLElement {
     $("wiz-back")?.addEventListener("click",   () => { this._wiz = "stops"; this._render(); });
     $("wiz-done-ok")?.addEventListener("click", () => { this._wiz = null; this._render(); });
 
-    // Step 1: geolocation
+    // Step 1: map picker
+    const mapEl = this._root.querySelector("#wiz-map");
+    if (mapEl) {
+      // Default: Chișinău center, or last picked position
+      mapEl.location = {
+        latitude:  this._wizData.lat ?? 47.0105,
+        longitude: this._wizData.lon ?? 28.8638,
+      };
+      mapEl.addEventListener("change", e => {
+        const loc = e.detail?.location ?? e.detail;
+        if (loc?.latitude !== undefined) {
+          this._wizData.lat = loc.latitude;
+          this._wizData.lon = loc.longitude;
+        }
+      });
+    }
+
+    // Geolocation button — moves map pin to user's position
     $("wiz-geo")?.addEventListener("click", () => {
-      if (!navigator.geolocation) {
-        this._wizData.error = "Геолокация не поддерживается браузером";
-        this._wiz = "error"; this._render(); return;
-      }
+      if (!navigator.geolocation) return;
       const btn = $("wiz-geo");
-      if (btn) btn.disabled = true;
+      if (btn) { btn.disabled = true; btn.textContent = "⏳ Определяю…"; }
       navigator.geolocation.getCurrentPosition(
-        pos => this._findStops(pos.coords.latitude, pos.coords.longitude),
-        ()  => { this._wizData.error = "Не удалось получить местоположение"; this._wiz = "error"; this._render(); },
+        pos => {
+          this._wizData.lat = pos.coords.latitude;
+          this._wizData.lon = pos.coords.longitude;
+          const map = this._root.querySelector("#wiz-map");
+          if (map) map.location = { latitude: this._wizData.lat, longitude: this._wizData.lon };
+          if (btn) { btn.disabled = false; btn.textContent = "📍 Моё местоположение"; }
+        },
+        () => {
+          if (btn) { btn.disabled = false; btn.textContent = "📍 Моё местоположение"; }
+        },
         { timeout: 10000, enableHighAccuracy: true }
       );
     });
 
     $("wiz-search")?.addEventListener("click", () => {
-      const lat = parseFloat(this._root.getElementById("wiz-lat")?.value);
-      const lon = parseFloat(this._root.getElementById("wiz-lon")?.value);
-      if (isNaN(lat) || isNaN(lon)) return;
+      const lat = this._wizData.lat;
+      const lon = this._wizData.lon;
+      if (lat == null || lon == null) {
+        alert("Укажи точку на карте или нажми «Моё местоположение»");
+        return;
+      }
       this._findStops(lat, lon);
     });
 
