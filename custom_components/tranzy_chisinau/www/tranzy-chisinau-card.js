@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 const CARD_TAG     = "tranzy-chisinau-card";
-const CARD_VERSION = "0.1.9";
+const CARD_VERSION = "0.1.10";
 const DSEG7_URL    = "https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2";
 
 // Identify Tranzy route sensors by attribute (entity_id format is not reliable)
@@ -547,17 +547,14 @@ class TranzyChisinauCardEditor extends HTMLElement {
         </div>`;
     }).join("");
 
-    const wizHtml = this._renderWizard();
-
     this._root.innerHTML = `
       <style>${EDITOR_CSS}</style>
       <div class="editor">
         ${blocksHtml}
-        ${wizHtml || `<button class="btn-add" data-action="open-wiz">+ Добавить остановку</button>`}
+        <button class="btn-add" data-action="open-wiz">+ Добавить остановку</button>
       </div>`;
 
     this._wireExisting();
-    this._wireWizard();
   }
 
   // ── Existing stops wiring ─────────────────────────────────────
@@ -569,7 +566,10 @@ class TranzyChisinauCardEditor extends HTMLElement {
     this._root.querySelectorAll("[data-action=remove]").forEach(el =>
       el.addEventListener("click", () => this._handle(el)));
     this._root.querySelectorAll("[data-action=open-wiz]").forEach(el =>
-      el.addEventListener("click", () => { this._wiz = "location"; this._wizData = {}; this._render(); }));
+      el.addEventListener("click", () => {
+        history.pushState(null, "", "/config/integrations/dashboard");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }));
     this._root.querySelectorAll("input[type=checkbox][data-entity]").forEach(el =>
       el.addEventListener("change", () => this._handle(el)));
   }
