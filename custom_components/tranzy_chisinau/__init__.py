@@ -4,12 +4,10 @@ from __future__ import annotations
 import logging
 import math
 from datetime import timedelta
+from pathlib import Path
 
-from homeassistant.components.persistent_notification import async_create as notify_create
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.event import async_call_later
+from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,56 +31,22 @@ def haversine_km(lat1, lon1, lat2, lon2) -> float:
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    hass.data.setdefault(DOMAIN, {})
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Register the Lovelace card JS as a frontend module."""
+    from homeassistant.components.frontend import add_extra_js_url
 
-    # Show card YAML as a notification only on first setup
-    if not entry.options.get("card_notified"):
-        @callback
-        def _schedule(_now=None):
-            hass.async_create_task(_notify_card(hass, entry))
-
-        async_call_later(hass, 3, _schedule)
-        hass.config_entries.async_update_entry(
-            entry, options={**entry.options, "card_notified": True}
-        )
+    www = Path(__file__).parent / "www"
+    if www.is_dir():
+        hass.http.register_static_path(f"/{DOMAIN}", str(www), cache_headers=False)
+        add_extra_js_url(hass, f"/{DOMAIN}/tranzy-chisinau-card.js")
 
     return True
 
 
-async def _notify_card(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    reg = er.async_get(hass)
-
-    all_ids = [
-        e.entity_id
-        for e in reg.entities.values()
-        if e.config_entry_id == entry.entry_id
-    ]
-    route_ids = sorted(e for e in all_ids if "next" not in e)
-    summary_ids = [e for e in all_ids if "next" in e]
-    entity_ids = route_ids + summary_ids
-
-    stop_name = entry.data.get("stop_name", "My Stop")
-    entity_list = "\n".join(f"  - {eid}" for eid in entity_ids)
-
-    card_yaml = (
-        f"type: entities\n"
-        f"title: Transport — {stop_name}\n"
-        f"entities:\n"
-        f"{entity_list}"
-    )
-
-    notify_create(
-        hass,
-        (
-            f"Your Tranzy card for **{stop_name}** is ready.\n\n"
-            f"Go to **Dashboard → Edit → Add Card → Manual** and paste:\n\n"
-            f"```yaml\n{card_yaml}\n```"
-        ),
-        title="Tranzy — Dashboard card ready",
-        notification_id=f"tranzy_card_{entry.entry_id}",
-    )
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    hass.data.setdefault(DOMAIN, {})
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

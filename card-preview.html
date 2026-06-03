@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tranzy Chișinău — Card Preview</title>
+  <style>
+    @font-face {
+      font-family: 'DSEG7Classic';
+      src: url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2') format('woff2');
+      font-display: swap;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111827;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 48px 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      gap: 32px;
+    }
+
+    .demo-label {
+      color: rgba(255,255,255,0.2);
+      font-size: 10px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+
+    /* ══════════ CARD ══════════ */
+    .card {
+      width: 100%;
+      max-width: 520px;
+      background: #080808;
+      border-radius: 14px;
+      border: 1px solid rgba(255,179,0,0.18);
+      overflow: hidden;
+      box-shadow:
+        0 8px 48px rgba(0,0,0,0.9),
+        inset 0 1px 0 rgba(255,179,0,0.05),
+        0 0 120px rgba(255,140,0,0.025);
+    }
+
+    /* ══════════ STOP SECTION ══════════ */
+    .stop-section { padding: 10px 12px 8px; }
+
+    .stop-section + .stop-section {
+      border-top: 1px solid rgba(255,179,0,0.07);
+      padding-top: 12px;
+    }
+
+    .stop-header {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(255,179,0,0.38);
+      margin-bottom: 8px;
+      padding-left: 2px;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* ══════════ ROUTE ROW ══════════ */
+    .row {
+      display: grid;
+      grid-template-columns: 62px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 8px;
+      border-radius: 8px;
+      background: rgba(255,179,0,0.018);
+      border: 1px solid rgba(255,179,0,0.055);
+      margin-bottom: 5px;
+      min-height: 58px;
+    }
+    .row:last-child { margin-bottom: 0; }
+
+    .row.arriving {
+      background: rgba(0,255,136,0.035);
+      border-color: rgba(0,255,136,0.14);
+    }
+
+    .row.nodata { opacity: 0.26; }
+
+    /* Badge */
+    .badge {
+      background: #030303;
+      border: 1px solid rgba(255,179,0,0.26);
+      border-radius: 5px;
+      padding: 7px 4px;
+      text-align: center;
+      font-family: 'DSEG7Classic', 'Courier New', monospace;
+      font-size: 21px;
+      color: #FFB300;
+      text-shadow:
+        0 0 6px rgba(255,179,0,0.95),
+        0 0 18px rgba(255,140,0,0.4),
+        0 0 40px rgba(255,120,0,0.15);
+      box-shadow: inset 0 2px 12px rgba(0,0,0,0.75);
+      white-space: nowrap;
+      letter-spacing: 1px;
+    }
+    .arriving .badge {
+      color: #00FF88;
+      text-shadow:
+        0 0 6px rgba(0,255,136,0.95),
+        0 0 18px rgba(0,255,136,0.35),
+        0 0 40px rgba(0,200,100,0.15);
+      border-color: rgba(0,255,136,0.32);
+    }
+
+    /* Destination */
+    .dest {
+      font-size: 11px;
+      color: rgba(255,179,0,0.52);
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: 'Courier New', monospace;
+    }
+    .arriving .dest { color: rgba(0,255,136,0.62); }
+
+    /* Time block */
+    .time-block { text-align: right; white-space: nowrap; }
+
+    .arrival-time {
+      display: block;
+      font-family: 'DSEG7Classic', 'Courier New', monospace;
+      font-size: 30px;
+      color: #FFB300;
+      text-shadow:
+        0 0 8px rgba(255,179,0,0.85),
+        0 0 22px rgba(255,140,0,0.35),
+        0 0 50px rgba(255,120,0,0.12);
+      letter-spacing: 3px;
+      line-height: 1;
+    }
+    .arriving .arrival-time {
+      color: #00FF88;
+      text-shadow:
+        0 0 8px rgba(0,255,136,0.85),
+        0 0 22px rgba(0,255,136,0.32),
+        0 0 50px rgba(0,200,100,0.12);
+    }
+
+    .eta-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 5px;
+      margin-top: 4px;
+    }
+
+    .eta-min {
+      font-size: 10px;
+      color: rgba(255,179,0,0.38);
+      letter-spacing: 1px;
+      font-family: 'Courier New', monospace;
+    }
+    .arriving .eta-min { color: rgba(0,255,136,0.42); }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #00FF88;
+      box-shadow: 0 0 7px #00FF88, 0 0 14px rgba(0,255,136,0.4);
+      animation: pulse 1.3s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.1; transform: scale(0.65); }
+    }
+
+    .card-foot { height: 6px; }
+  </style>
+</head>
+<body>
+
+<div class="demo-label">Tranzy Chișinău · Card Preview</div>
+
+<div class="card" id="card">
+
+  <div class="stop-section">
+    <div class="stop-header">Spre muncă — Str. Bogdan-Voievod</div>
+
+    <!-- arriving -->
+    <div class="row arriving">
+      <div class="badge">10</div>
+      <div class="dest">Miorița</div>
+      <div class="time-block">
+        <span class="arrival-time" data-eta="0"></span>
+        <div class="eta-row">
+          <span class="eta-min">~0 мин</span>
+          <div class="pulse-dot"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="badge">5</div>
+      <div class="dest">Bariera Sculeni</div>
+      <div class="time-block">
+        <span class="arrival-time" data-eta="10"></span>
+        <div class="eta-row"><span class="eta-min">~10 мин</span></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="badge">26</div>
+      <div class="dest">Piața Centrală</div>
+      <div class="time-block">
+        <span class="arrival-time" data-eta="18"></span>
+        <div class="eta-row"><span class="eta-min">~18 мин</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stop-section">
+    <div class="stop-header">Acasă — Str. Ismail</div>
+
+    <div class="row">
+      <div class="badge">30</div>
+      <div class="dest">Botanica</div>
+      <div class="time-block">
+        <span class="arrival-time" data-eta="4"></span>
+        <div class="eta-row"><span class="eta-min">~4 мин</span></div>
+      </div>
+    </div>
+
+    <div class="row nodata">
+      <div class="badge">32</div>
+      <div class="dest">Ciocana</div>
+      <div class="time-block">
+        <span class="arrival-time">-- --</span>
+        <div class="eta-row"><span class="eta-min">нет данных</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-foot"></div>
+</div>
+
+<script>
+  function etaToDisplay(etaMin) {
+    const d = new Date(Date.now() + etaMin * 60_000);
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${h} ${m}`;
+  }
+
+  function updateTimes() {
+    document.querySelectorAll('[data-eta]').forEach(el => {
+      el.textContent = etaToDisplay(parseFloat(el.dataset.eta));
+    });
+  }
+
+  updateTimes();
+  setInterval(updateTimes, 30_000);
+</script>
+
+</body>
+</html>
