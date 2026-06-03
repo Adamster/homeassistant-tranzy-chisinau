@@ -93,6 +93,13 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry: config_entries.ConfigEntry):
         return TranzyOptionsFlow()
 
+    async def async_step_import(self, import_data: dict):
+        """Create entry programmatically from the card editor WebSocket."""
+        return self.async_create_entry(
+            title=import_data.get("stop_name", "Stop"),
+            data=import_data,
+        )
+
     # ── Step 1 — API key ─────────────────────────────────────────
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
         errors: dict[str, str] = {}
