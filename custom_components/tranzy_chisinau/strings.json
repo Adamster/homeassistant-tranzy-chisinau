@@ -17,14 +17,14 @@
       },
       "stop_select": {
         "title": "Select a stop",
-        "description": "Choose the stop nearest to the point you selected.",
+        "description": "Choose the stop nearest to the point you selected.\n\n**View on map:**\n{stop_links}",
         "data": {
           "stop_id": "Stop"
         }
       },
       "routes": {
         "title": "Select routes for {stop_name}",
-        "description": "Choose the routes you want to track at this stop.",
+        "description": "Choose the routes you want to track at this stop.\n\n🚎 Trolleybuses · 🚌 Buses",
         "data": {
           "routes": "Routes"
         }
@@ -37,6 +37,17 @@
     },
     "abort": {
       "already_configured": "This stop is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Add Tranzy card to dashboard",
+        "description": "Copy the YAML below, then go to your dashboard → **Edit** → **Add Card** → **Manual** and paste it.\n\nStop: **{stop_name}**",
+        "data": {
+          "card_yaml": "Card YAML"
+        }
+      }
     }
   }
 }

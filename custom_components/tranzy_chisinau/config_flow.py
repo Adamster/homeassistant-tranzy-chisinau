@@ -9,6 +9,8 @@ import aiohttp
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.core import callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     LocationSelector,
@@ -17,6 +19,9 @@ from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 import homeassistant.helpers.config_validation as cv
 
@@ -76,13 +81,17 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._api_key: str = ""
         self._all_stops: list = []
-        self._nearby_stops: list = []
+        # Each entry: (dist_km, stop_dict, lat, lon)
+        self._nearby_stops: list[tuple[float, dict, float, float]] = []
         self._stop_info: dict = {}
         self._routes_data: list = []
 
-    # ------------------------------------------------------------------ #
-    # Step 1 — API key                                                     #
-    # ------------------------------------------------------------------ #
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry):
+        return TranzyOptionsFlow(config_entry)
+
+    # ── Step 1 — API key ─────────────────────────────────────────
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
         errors: dict[str, str] = {}
 
@@ -99,7 +108,6 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["base"] = "cannot_connect"
                 else:
                     self._api_key = api_key
-                    # Pre-load stops so the map step is fast
                     session = async_get_clientsession(self.hass)
                     self._all_stops = await _api_fetch(session, api_key, "/stops") or []
                     return await self.async_step_location()
@@ -110,9 +118,7 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    # ------------------------------------------------------------------ #
-    # Step 2 — Map: user picks a point                                     #
-    # ------------------------------------------------------------------ #
+    # ── Step 2 — Map picker ──────────────────────────────────────
     async def async_step_location(self, user_input: dict[str, Any] | None = None):
         errors: dict[str, str] = {}
 
@@ -123,8 +129,7 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not self._all_stops:
                 errors["base"] = "cannot_connect"
             else:
-                # Find 5 nearest stops to the picked point
-                stops_with_dist = []
+                stops_with_dist: list[tuple[float, dict, float, float]] = []
                 for s in self._all_stops:
                     try:
                         slat = float(s.get("stop_lat") or 0)
@@ -134,17 +139,16 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     if not slat or not slon:
                         continue
                     dist = _haversine_km(lat, lon, slat, slon)
-                    stops_with_dist.append((dist, s))
+                    stops_with_dist.append((dist, s, slat, slon))
 
                 stops_with_dist.sort(key=lambda x: x[0])
-                self._nearby_stops = [s for _, s in stops_with_dist[:5]]
+                self._nearby_stops = stops_with_dist[:5]
 
                 if not self._nearby_stops:
                     errors["base"] = "no_stops_nearby"
                 else:
                     return await self.async_step_stop_select()
 
-        # Default to Chișinău city center so the map opens in the right place
         return self.async_show_form(
             step_id="location",
             data_schema=vol.Schema({
@@ -156,26 +160,32 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    # ------------------------------------------------------------------ #
-    # Step 3 — Pick one of the 5 nearest stops                            #
-    # ------------------------------------------------------------------ #
+    # ── Step 3 — Pick stop (with OSM map links) ──────────────────
     async def async_step_stop_select(self, user_input: dict[str, Any] | None = None):
         errors: dict[str, str] = {}
 
         if user_input is not None:
             stop_id = int(user_input["stop_id"])
             self._stop_info = next(
-                (s for s in self._nearby_stops if s["stop_id"] == stop_id), {}
+                (s for _, s, _, _ in self._nearby_stops if s["stop_id"] == stop_id),
+                {},
             )
             return await self.async_step_routes()
 
         options = [
             SelectOptionDict(
                 value=str(s["stop_id"]),
-                label=s.get("stop_name", f"Stop {s['stop_id']}"),
+                label=f"{s.get('stop_name', f'Stop {s[\"stop_id\"]}')}"
+                      f"  —  {dist * 1000:.0f} м",
             )
-            for s in self._nearby_stops
+            for dist, s, _lat, _lon in self._nearby_stops
         ]
+
+        stop_links = "\n".join(
+            f"- [{s.get('stop_name', 'Stop')} ({dist * 1000:.0f} м)]"
+            f"(https://www.openstreetmap.org/?mlat={slat:.6f}&mlon={slon:.6f}&zoom=18)"
+            for dist, s, slat, slon in self._nearby_stops
+        )
 
         return self.async_show_form(
             step_id="stop_select",
@@ -187,12 +197,11 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
                 ),
             }),
+            description_placeholders={"stop_links": stop_links},
             errors=errors,
         )
 
-    # ------------------------------------------------------------------ #
-    # Step 4 — Select routes                                               #
-    # ------------------------------------------------------------------ #
+    # ── Step 4 — Select routes (grouped by transport type) ────────
     async def async_step_routes(self, user_input: dict[str, Any] | None = None):
         errors: dict[str, str] = {}
 
@@ -205,7 +214,9 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not selected_routes:
                 errors["base"] = "no_routes_selected"
             else:
-                stop_name = self._stop_info.get("stop_name", f"Stop {self._stop_info.get('stop_id')}")
+                stop_name = self._stop_info.get(
+                    "stop_name", f"Stop {self._stop_info.get('stop_id')}"
+                )
                 return self.async_create_entry(
                     title=stop_name,
                     data={
@@ -218,13 +229,23 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     },
                 )
 
-        route_options = {
-            str(r["route_id"]): f"{r.get('route_short_name', r['route_id'])} — {r.get('route_long_name', '')}"
-            for r in sorted(
-                self._routes_data,
-                key=lambda x: str(x.get("route_short_name", "")).zfill(4),
-            )
-        }
+        sort_key = lambda r: str(r.get("route_short_name", "")).zfill(4)
+        trolleybuses = sorted([r for r in self._routes_data if r.get("route_type") == 11], key=sort_key)
+        buses        = sorted([r for r in self._routes_data if r.get("route_type") == 3],  key=sort_key)
+        other        = sorted([r for r in self._routes_data if r.get("route_type") not in (11, 3)], key=sort_key)
+
+        def label(r: dict, emoji: str) -> str:
+            short = r.get("route_short_name", r["route_id"])
+            long_ = r.get("route_long_name", "")
+            return f"{emoji} {short} — {long_}" if long_ else f"{emoji} {short}"
+
+        route_options: dict[str, str] = {}
+        for r in trolleybuses:
+            route_options[str(r["route_id"])] = label(r, "🚎")
+        for r in buses:
+            route_options[str(r["route_id"])] = label(r, "🚌")
+        for r in other:
+            route_options[str(r["route_id"])] = label(r, "🚐")
 
         return self.async_show_form(
             step_id="routes",
@@ -235,4 +256,47 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "stop_name": self._stop_info.get("stop_name", ""),
             },
             errors=errors,
+        )
+
+
+# ── Options flow: "Configure" button ─────────────────────────────
+
+class TranzyOptionsFlow(config_entries.OptionsFlow):
+    """Shown when user clicks Configure on the integration card."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        self._entry = config_entry
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None):
+        if user_input is not None:
+            return self.async_create_entry(title="", data={})
+
+        reg = er.async_get(self.hass)
+        route_entities = sorted(
+            e.entity_id
+            for e in reg.entities.values()
+            if e.config_entry_id == self._entry.entry_id
+            and e.unique_id
+            and "_route_" in e.unique_id
+        )
+
+        stop_name = self._entry.data.get("stop_name", "My Stop")
+        entity_lines = "\n".join(f"      - {eid}" for eid in route_entities)
+
+        card_yaml = (
+            f"type: custom:tranzy-chisinau-card\n"
+            f"stops:\n"
+            f"  - title: \"{stop_name}\"\n"
+            f"    entities:\n"
+            f"{entity_lines}"
+        )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Optional("card_yaml", default=card_yaml): TextSelector(
+                    TextSelectorConfig(multiline=True, type=TextSelectorType.TEXT)
+                ),
+            }),
+            description_placeholders={"stop_name": stop_name},
         )
