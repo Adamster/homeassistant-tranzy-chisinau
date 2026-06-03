@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 const CARD_TAG     = "tranzy-chisinau-card";
-const CARD_VERSION = "0.1.5";
+const CARD_VERSION = "0.1.6";
 const DSEG7_URL    = "https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2";
 const ROUTE_RE     = /^sensor\.tranzy_\d+_route_/;
 

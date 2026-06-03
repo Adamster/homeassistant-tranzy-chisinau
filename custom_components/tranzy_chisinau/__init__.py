@@ -85,6 +85,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 # ── WebSocket: find nearby stops ──────────────────────────────────
 
+@websocket_api.require_admin
 @websocket_api.websocket_command({
     vol.Required("type"): "tranzy_chisinau/find_stops",
     vol.Required("lat"): float,
@@ -142,6 +143,7 @@ async def ws_find_stops(hass: HomeAssistant, connection, msg: dict) -> None:
 
 # ── WebSocket: create new config entry for a stop ─────────────────
 
+@websocket_api.require_admin
 @websocket_api.websocket_command({
     vol.Required("type"): "tranzy_chisinau/add_stop",
     vol.Required("stop_id"): int,
