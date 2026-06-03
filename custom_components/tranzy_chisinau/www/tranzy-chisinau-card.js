@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 const CARD_TAG     = "tranzy-chisinau-card";
-const CARD_VERSION = "0.1.8";
+const CARD_VERSION = "0.1.9";
 const DSEG7_URL    = "https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2";
 
 // Identify Tranzy route sensors by attribute (entity_id format is not reliable)
