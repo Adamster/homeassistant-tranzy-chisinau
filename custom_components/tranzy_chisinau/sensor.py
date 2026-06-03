@@ -195,6 +195,7 @@ class TranzyArrivalSensor(SensorEntity):
         if best_eta is not None:
             self._attr_native_value = round(best_eta, 1)
             self._extra = {
+                "tranzy_sensor": "route",
                 "route": self._route_short,
                 "route_long_name": self._route_long,
                 "stop_name": self._stop_name,
@@ -205,7 +206,12 @@ class TranzyArrivalSensor(SensorEntity):
             }
         else:
             self._attr_native_value = None
-            self._extra = {"status": "no data", "route": self._route_short}
+            self._extra = {
+                "tranzy_sensor": "route",
+                "route": self._route_short,
+                "stop_name": self._stop_name,
+                "status": "no data",
+            }
 
         self.async_write_ha_state()
 

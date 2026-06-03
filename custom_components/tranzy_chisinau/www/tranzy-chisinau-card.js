@@ -4,9 +4,11 @@
 // ═══════════════════════════════════════════════════════════════
 
 const CARD_TAG     = "tranzy-chisinau-card";
-const CARD_VERSION = "0.1.6";
+const CARD_VERSION = "0.1.7";
 const DSEG7_URL    = "https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2";
-const ROUTE_RE     = /^sensor\.tranzy_\d+_route_/;
+
+// Identify Tranzy route sensors by attribute (entity_id format is not reliable)
+const isTranzyRoute = state => state?.attributes?.tranzy_sensor === "route";
 
 // Inject DSEG7Classic font into document head (once per page load)
 (function () {
@@ -223,7 +225,7 @@ class TranzyChisinauCard extends HTMLElement {
   static getStubConfig(hass) {
     const groups = {};
     for (const [id, state] of Object.entries(hass.states)) {
-      if (!ROUTE_RE.test(id)) continue;
+      if (!isTranzyRoute(state)) continue;
       const stop = state.attributes.stop_name ?? "Stop";
       (groups[stop] ??= []).push(id);
     }
@@ -468,13 +470,17 @@ class TranzyChisinauCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    this._render();
+    // Don't re-render while user is actively typing (focused input)
+    const active = this._root.activeElement;
+    if (!active || active.tagName === "SELECT" || active.type === "checkbox" || active.type === "radio") {
+      this._render();
+    }
   }
 
   _discover() {
     const groups = {};
     for (const [id, state] of Object.entries(this._hass?.states ?? {})) {
-      if (!ROUTE_RE.test(id)) continue;
+      if (!isTranzyRoute(state)) continue;
       const stop  = state.attributes.stop_name ?? "Unknown";
       const route = state.attributes.route     ?? id;
       const dest  = state.attributes.route_long_name
@@ -840,9 +846,9 @@ class TranzyChisinauCardEditor extends HTMLElement {
 
       // Auto-add new stop to card config after a short delay
       setTimeout(() => {
-        const newEntities = Object.keys(this._hass.states)
-          .filter(id => ROUTE_RE.test(id) &&
-            (this._hass.states[id].attributes.stop_name === selectedStop.stop_name));
+        const newEntities = Object.entries(this._hass.states)
+          .filter(([, s]) => isTranzyRoute(s) && s.attributes.stop_name === selectedStop.stop_name)
+          .map(([id]) => id);
 
         const stops = JSON.parse(JSON.stringify(normalizeStops(this._config)));
         stops.push({
