@@ -4,11 +4,20 @@
 // ═══════════════════════════════════════════════════════════════
 
 const CARD_TAG     = "tranzy-chisinau-card";
-const CARD_VERSION = "0.1.12";
+const CARD_VERSION = "0.1.13";
 const DSEG7_URL    = "https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2";
 
-// Identify Tranzy route sensors by attribute (entity_id format is not reliable)
-const isTranzyRoute = state => state?.attributes?.tranzy_sensor === "route";
+// Identify Tranzy route sensors by attribute.
+// Primary: explicit marker added in v0.1.7+
+// Fallback: route attribute + unit "min" + no all_arrivals (summary sensor has it)
+const isTranzyRoute = state => {
+  const a = state?.attributes;
+  if (!a) return false;
+  if (a.tranzy_sensor === "route") return true;
+  return typeof a.route === "string"
+    && a.unit_of_measurement === "min"
+    && !("all_arrivals" in a);
+};
 
 // Inject DSEG7Classic font into document head (once per page load)
 (function () {
