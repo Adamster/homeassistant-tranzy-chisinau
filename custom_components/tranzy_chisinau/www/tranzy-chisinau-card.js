@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 const CARD_TAG     = "tranzy-chisinau-card";
-const CARD_VERSION = "0.1.16";
+const CARD_VERSION = "0.1.17";
 const DSEG7_URL    = "https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2";
 
 // Identify Tranzy route sensors by attribute.
@@ -516,6 +516,17 @@ class TranzyChisinauCardEditor extends HTMLElement {
     });
   }
 
+  // Return map center from first configured Tranzy stop, fallback to Chișinău
+  _mapCenter() {
+    for (const state of Object.values(this._hass?.states ?? {})) {
+      if (!isTranzyRoute(state)) continue;
+      const lat = state.attributes.stop_lat;
+      const lon = state.attributes.stop_lon;
+      if (lat && lon) return { latitude: lat, longitude: lon };
+    }
+    return { latitude: 47.0105, longitude: 28.8638 };
+  }
+
   _discover() {
     const groups = {};
     for (const [id, state] of Object.entries(this._hass?.states ?? {})) {
@@ -785,10 +796,10 @@ class TranzyChisinauCardEditor extends HTMLElement {
     const mapEl = this._root.querySelector("#wiz-map");
     if (mapEl) {
       // Default: Chișinău center, or last picked position
-      mapEl.location = {
-        latitude:  this._wizData.lat ?? 47.0105,
-        longitude: this._wizData.lon ?? 28.8638,
-      };
+      const center = this._wizData.lat
+        ? { latitude: this._wizData.lat, longitude: this._wizData.lon }
+        : this._mapCenter();
+      mapEl.location = center;
       mapEl.addEventListener("change", e => {
         const loc = e.detail?.location ?? e.detail;
         if (loc?.latitude !== undefined) {

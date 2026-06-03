@@ -199,6 +199,8 @@ class TranzyArrivalSensor(SensorEntity):
                 "route": self._route_short,
                 "route_long_name": self._route_long,
                 "stop_name": self._stop_name,
+                "stop_lat": self._stop_lat,
+                "stop_lon": self._stop_lon,
                 "distance_km": round(best_dist, 2),
                 "vehicle_label": best_vehicle.get("label", ""),
                 "speed_kmh": best_vehicle.get("speed", 0),
@@ -210,6 +212,8 @@ class TranzyArrivalSensor(SensorEntity):
                 "tranzy_sensor": "route",
                 "route": self._route_short,
                 "stop_name": self._stop_name,
+                "stop_lat": self._stop_lat,
+                "stop_lon": self._stop_lon,
                 "status": "no data",
             }
 

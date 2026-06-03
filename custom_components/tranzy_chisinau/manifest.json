@@ -1,7 +1,7 @@
 {
   "domain": "tranzy_chisinau",
   "name": "Tranzy Chișinău Transport",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "documentation": "https://tranzy.ai/opendata/",
   "requirements": [],
   "dependencies": ["frontend"],
