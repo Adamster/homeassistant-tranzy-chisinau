@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 const CARD_TAG     = "tranzy-chisinau-card";
-const CARD_VERSION = "0.1.14";
+const CARD_VERSION = "0.1.15";
 const DSEG7_URL    = "https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2";
 
 // Identify Tranzy route sensors by attribute.
@@ -216,7 +216,16 @@ const CARD_CSS = `
   font-family: monospace;
 }
 
-.card-foot { height: 6px; }
+.card-foot { height: 2px; }
+
+.version {
+  text-align: right;
+  padding: 0 10px 5px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: rgba(255,179,0,0.2);
+  font-family: monospace;
+}
 `;
 
 class TranzyChisinauCard extends HTMLElement {
@@ -273,6 +282,7 @@ class TranzyChisinauCard extends HTMLElement {
       <div class="card">
         ${html || `<div class="empty">Edit card to add stops &amp; routes</div>`}
         <div class="card-foot"></div>
+        <div class="version">v${CARD_VERSION}</div>
       </div>`;
   }
 
