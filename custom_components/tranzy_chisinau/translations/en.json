@@ -43,7 +43,7 @@
     "step": {
       "init": {
         "title": "Add Tranzy card to dashboard",
-        "description": "Copy the YAML below, then go to your dashboard → **Edit** → **Add Card** → **Manual** and paste it.\n\nStop: **{stop_name}**",
+        "description": "Copy the YAML below, then go to your dashboard → **Edit** → **Add Card** → **Manual** and paste it.\n\nStop: **{stop_name}**\n\n```yaml\n{card_yaml}\n```",
         "data": {
           "card_yaml": "Card YAML"
         }

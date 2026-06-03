@@ -15,13 +15,16 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     LocationSelector,
     LocationSelectorConfig,
-    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
-    TextSelector,
-    TextSelectorConfig,
 )
+
+try:
+    from homeassistant.helpers.selector import TextSelector, TextSelectorConfig
+    _HAS_TEXT_SELECTOR = True
+except ImportError:
+    _HAS_TEXT_SELECTOR = False
 import homeassistant.helpers.config_validation as cv
 
 from . import AGENCY_ID, BASE_URL, DOMAIN
@@ -174,10 +177,10 @@ class TranzyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         options = []
         for dist, s, _lat, _lon in self._nearby_stops:
             name = s.get("stop_name") or f"Stop {s['stop_id']}"
-            options.append(SelectOptionDict(
-                value=str(s["stop_id"]),
-                label=f"{name}  —  {dist * 1000:.0f} м",
-            ))
+            options.append({
+                "value": str(s["stop_id"]),
+                "label": f"{name}  —  {dist * 1000:.0f} м",
+            })
 
         stop_links = "\n".join(
             f"- [{s.get('stop_name', 'Stop')} ({dist * 1000:.0f} м)]"
@@ -286,12 +289,20 @@ class TranzyOptionsFlow(config_entries.OptionsFlow):
             f"{entity_lines}"
         )
 
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema({
+        if _HAS_TEXT_SELECTOR:
+            schema = vol.Schema({
                 vol.Optional("card_yaml", default=card_yaml): TextSelector(
                     TextSelectorConfig(multiline=True)
                 ),
-            }),
-            description_placeholders={"stop_name": stop_name},
+            })
+        else:
+            schema = vol.Schema({})
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=schema,
+            description_placeholders={
+                "stop_name": stop_name,
+                "card_yaml": card_yaml,
+            },
         )
